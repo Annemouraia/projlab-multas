@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projlab · Controle de Multas e Frotas</title>
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#182860">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Projlab Multas">
+
+<style>
+  :root {
+    --navy: #182860;
+    --navy-deep: #0f1a40;
+    --navy-soft: #2c3f86;
+    --cyan: #00A8E8;
+    --cyan-soft: #e5f6fd;
+    --ink: #1a1d29;
+    --gray: #6b7280;
+    --gray-soft: #9aa0ab;
+    --gray-line: #e2e5ea;
+    --paper: #f6f7fa;
+    --white: #ffffff;
+    --ok: #1a8f5e;
+    --ok-soft: #e8f6ef;
+    --warn: #c97a1f;
+    --warn-soft: #fbf1e3;
+    --danger: #c0392b;
+    --danger-soft: #fbeae8;
+    --radius: 6px;
+    --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-display);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+
+  a { color: var(--navy); }
+
+  /* ---------- Header ---------- */
+  .app-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+  }
+  .app-header img.logo {
+    height: 42px;
+    display: block;
+  }
+  .header-badge {
+    font-size: 13px;
+    color: var(--navy);
+    background: var(--cyan-soft);
+    border: 1px solid #bfe9f8;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  @media (max-width: 560px) {
+    .header-badge { display: none; }
+  }
+
+  /* ---------- Tab bar ---------- */
+  .tab-bar {
+    background: var(--navy-deep);
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    padding: 0 12px;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 16px;
+    color: #aeb8d9;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2.5px solid transparent;
+    transition: color .15s ease, border-color .15s ease;
+    font-weight: 500;
+  }
+  .tab-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .tab-btn:hover { color: #ffffff; }
+  .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+  @media (prefers-reduced-motion: reduce) {
+    .tab-btn, .sub-tab-btn { transition: none; }
+  }
+
+  /* ---------- Layout ---------- */
+  .main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .page-intro { color: var(--gray); font-size: 14.5px; margin-bottom: 20px; }
+
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .panel + .panel { margin-top: 20px; }
+  .panel h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .panel .panel-sub { font-size: 13px; color: var(--gray); margin-bottom: 16px; }
+
+  /* ---------- Stat readouts ---------- */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 860px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px) { .stat-grid { grid-template-columns: 1fr; } }
+
+  .stat-panel {
+    background: var(--white);
+    border: 1px solid var(--gray-line);
+    border-top: 3px solid var(--cyan);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .stat-panel.is-danger { border-top-color: var(--danger); }
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.5px;
+  }
+  .stat-label { font-size: 13px; color: var(--gray); margin-top: 4px; }
+
+  /* ---------- Ranking bars ---------- */
+  .rank-list { display: flex; flex-direction: column; gap: 10px; }
+  .rank-row { display: flex; align-items: center; gap: 12px; }
+  .rank-name {
+    width: 120px;
+    flex-shrink: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rank-track {
+    flex: 1;
+    background: var(--paper);
+    border-radius: 3px;
+    height: 20px;
+    overflow: hidden;
+    border: 1px solid var(--gray-line);
+  }
+  .rank-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--navy), var(--cyan));
+    border-radius: 3px 0 0 3px;
+    min-width: 3px;
+  }
+  .rank-value {
+    width: 46px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--navy);
+    flex-shrink: 0;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 780px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ---------- Forms ---------- */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 780px) { .form-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.span-2 { grid-column: span 2; }
+  @media (max-width: 520px) { .field.span-2 { grid-column: span 1; } }
+  .field label { font-size: 13px; color: var(--gray); font-weight: 600; }
+  .field input, .field select, .field textarea {
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 9px 10px;
+    background: var(--white);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus,
+  .field input:focus-visible, .field select:focus-visible {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px var(--cyan-soft);
+  }
+  .field textarea { resize: vertical; min-height: 44px; }
+
+  .uf-link-box {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 0 10px;
+    font-size: 13.5px;
+    color: var(--gray-soft);
+    background: var(--paper);
+  }
+  .uf-link-box a {
+    color: var(--navy);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .uf-link-box a:hover { text-decoration: underline; }
+
+  .quick-add-panel {
+    grid-column: 1 / -1;
+    padding: 18px;
+    background: var(--cyan-soft);
+    border: 1px solid #bfe9f8;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .quick-add-title { font-size: 13.5px; font-weight: 700; color: var(--navy); }
+  .quick-add-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .quick-add-row input {
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 9px 10px;
+    flex: 1;
+    min-width: 160px;
+    background: var(--white);
+  }
+  .quick-add-erro { color: var(--danger); font-size: 12.5px; min-height: 14px; }
+
+  .form-actions { display: flex; gap: 10px; align-items: center; }
+
+  .anexo-atual {
+    font-size: 13px;
+    color: var(--gray);
+    margin: -6px 0 14px;
+  }
+  .anexo-atual a { color: var(--navy); font-weight: 600; text-decoration: none; }
+  .anexo-atual a:hover { text-decoration: underline; }
+
+  .btn {
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-block;
+    text-decoration: none;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .btn-primary { background: var(--navy); color: var(--white); }
+  .btn-primary:hover { background: var(--navy-deep); }
+  .btn-outline { background: transparent; color: var(--navy); border: 1.5px solid var(--navy); padding: 8.5px 16px; }
+  .btn-outline:hover { background: var(--cyan-soft); }
+  .btn-text { background: none; color: var(--gray); padding: 8px 4px; font-weight: 500; }
+  .btn-text:hover { color: var(--ink); text-decoration: underline; }
+  .btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .field input, .field select { transition: none; }
+  }
+
+  .editing-flag {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid #f0d9b5;
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .editing-flag.active { display: flex; }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  thead th {
+    text-align: left;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--gray);
+    padding: 0 10px 10px;
+    border-bottom: 1.5px solid var(--navy);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 11px 10px;
+    border-bottom: 1px solid var(--gray-line);
+    font-size: 14px;
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { font-family: var(--font-mono); }
+  td.actions { white-space: nowrap; text-align: right; }
+  td.actions button { margin-left: 10px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill-ok { background: var(--ok-soft); color: var(--ok); }
+  .pill-warn { background: var(--warn-soft); color: var(--warn); }
+  .pill-danger { background: var(--danger-soft); color: var(--danger); }
+  .pill-neutral { background: var(--paper); color: var(--gray); }
+
+  .empty-state {
+    text-align: center;
+    padding: 36px 20px;
+    color: var(--gray);
+  }
+  .empty-state p { margin-bottom: 14px; font-size: 14.5px; }
+
+  .alert-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--warn-soft);
+    border: 1px solid #f0d9b5;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .alert-box svg { width: 20px; height: 20px; color: var(--warn); flex-shrink: 0; margin-top: 1px; }
+  .alert-box strong { color: var(--warn); }
+  .alert-box ul { margin: 6px 0 0 18px; font-size: 13.5px; color: var(--ink); }
+
+  .sub-tab-bar {
+    display: inline-flex;
+    background: var(--white);
+    border: 1px solid var(--gray-line);
+    border-radius: 999px;
+    padding: 4px;
+    margin-bottom: 20px;
+    gap: 4px;
+  }
+  .sub-tab-btn {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--gray);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .sub-tab-btn:hover { color: var(--ink); }
+  .sub-tab-btn.active { background: var(--navy); color: var(--white); }
+  .sub-tab-panel { display: none; }
+  .sub-tab-panel.active { display: block; }
+
+  .export-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 780px) { .export-grid { grid-template-columns: 1fr; } }
+  .export-card {
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .export-card h3 { font-size: 14.5px; color: var(--navy); }
+  .export-card p { font-size: 13px; color: var(--gray); flex: 1; }
+
+  footer.app-footer {
+    text-align: center;
+    color: var(--gray-soft);
+    font-size: 12.5px;
+    padding: 20px;
+  }
+
+  /* ---------- Login ---------- */
+  .login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+  }
+  .login-box {
+    background: var(--white);
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+  }
+  .login-box img.logo { height: 40px; margin-bottom: 22px; }
+  .login-box h1 { font-size: 15.5px; color: var(--navy); margin-bottom: 22px; font-weight: 700; }
+  .login-box form { text-align: left; display: flex; flex-direction: column; gap: 14px; }
+  .login-error { color: var(--danger); font-size: 13px; min-height: 16px; text-align: left; }
+
+  .loading-msg { text-align: center; padding: 60px 20px; color: var(--gray); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <img class="logo" src="data:image/jpeg;base64,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888888888888808888888888888888/y6xhoa8o48skwEks4MoEo8IA8Eo0cU8cwsk480I0A8Ic888888888888udveud8sss8MM8cccss88cMsccM88MMccM8s8ccMccM88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888/8QAMREAAQMCAwYFBAIDAQAAAAAAAQACAwQREiExBRATQVFxFCAyM1IiMFORUIEVQmFw/9oACAECAQE/AP5yxVj0Vj08tirHorHfYqx6Kx8uB3xKIPTy2PTfY+ax6eSxVj0Vj0++KR4h4n92VCKSopo3iJl7WIsvC0/4m/pGmp/xN/S2i2KorBHE0AMFnEKaIxPLTuGqjiYGNGEaBYGfEIxxn/UKoomlpcwWI5K2aiijEbRhGgWBnxCMcZ/1CnomOBLBYoggkFQwuleAP7KipYowMrnqrNCdHG8WLQqqjwAuZmOY3hRsYWN+kaBV7QJRYcls9rSx9wDmqtjRA6wHlo4RJJcjILhs+IVdCGODmjI674WMMTPpGgRbGNQAsMR5AqSlikB+mx6hSxmJ5afuUsPFkHQarCCLclQTmjrDG42jk0VwtpVgpqcket2TVSw4GYnZvdmVWwcSPEBmNw1CZ6W9gq6R4msHECyp6iUStGIkE7qlobO8Dqo/bZ2VfI9sgAJGSgqJWyN+okEoKsaBO6yoowyEHm7Mqqn4TMtTojNK43LiqWqeHhrjcFEAgg6FVDOHK5vK+W4aqP0M7BbQ94dls70P7qr9h/lo4uHEOpzKM7RKI+ZCqIxJER+kRYkboPaZ2CrmyF7cIOiijqMbbB2qGgVa8OmNvtgXKpYRFGOpzO6phMkeXqGYWz6jHE1j3fW1oxKtikmrMTyOGz0gHfVwmKQ9DohqEz0t7BT0jZX4i4jJQ0Ucbg65PRPc1jSSVI/HIXdSo/bZ2U9IJnBxJFgoqGNjg4klOcGtJJsAp5OJK53K6gI4LLdAtog3Yd0YJe0Dqhoq73z23DVR+hnZbQ94dls70P7qr9h/kpYuJKByGZWgTmVBnx4Dqhm0XCrYsEpIGR3Qe0zsE+WNhAc4BCpgOjwnDGwgGwPMKogdE/M3B0P24XYZ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" alt="Projlab - Engenharia para Laboratórios">
+    <h1>Controle de Multas &amp; Frotas</h1>
+    <form id="formLogin">
+      <div class="field">
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="loginSenha">Senha</label>
+        <input type="password" id="loginSenha" required autocomplete="current-password">
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="width:100%;">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+
+<header class="app-header">
+  <img class="logo" src="data:image/jpeg;base64,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888888888888808888888888888888/y6xhoa8o48skwEks4MoEo8IA8Eo0cU8cwsk480I0A8Ic888888888888udveud8sss8MM8cccss88cMsccM88MMccM8s8ccMccM88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888/8QAMREAAQMCAwYFBAIDAQAAAAAAAQACAwQREiExBRATQVFxFCAyM1IiMFORUIEVQmFw/9oACAECAQE/AP5yxVj0Vj08tirHorHfYqx6Kx8uB3xKIPTy2PTfY+ax6eSxVj0Vj0++KR4h4n92VCKSopo3iJl7WIsvC0/4m/pGmp/xN/S2i2KorBHE0AMFnEKaIxPLTuGqjiYGNGEaBYGfEIxxn/UKoomlpcwWI5K2aiijEbRhGgWBnxCMcZ/1CnomOBLBYoggkFQwuleAP7KipYowMrnqrNCdHG8WLQqqjwAuZmOY3hRsYWN+kaBV7QJRYcls9rSx9wDmqtjRA6wHlo4RJJcjILhs+IVdCGODmjI674WMMTPpGgRbGNQAsMR5AqSlikB+mx6hSxmJ5afuUsPFkHQarCCLclQTmjrDG42jk0VwtpVgpqcket2TVSw4GYnZvdmVWwcSPEBmNw1CZ6W9gq6R4msHECyp6iUStGIkE7qlobO8Dqo/bZ2VfI9sgAJGSgqJWyN+okEoKsaBO6yoowyEHm7Mqqn4TMtTojNK43LiqWqeHhrjcFEAgg6FVDOHK5vK+W4aqP0M7BbQ94dls70P7qr9h/lo4uHEOpzKM7RKI+ZCqIxJER+kRYkboPaZ2CrmyF7cIOiijqMbbB2qGgVa8OmNvtgXKpYRFGOpzO6phMkeXqGYWz6jHE1j3fW1oxKtikmrMTyOGz0gHfVwmKQ9DohqEz0t7BT0jZX4i4jJQ0Ucbg65PRPc1jSSVI/HIXdSo/bZ2U9IJnBxJFgoqGNjg4klOcGtJJsAp5OJK53K6gI4LLdAtog3Yd0YJe0Dqhoq73z23DVR+hnZbQ94dls70P7qr9h/kpYuJKByGZWgTmVBnx4Dqhm0XCrYsEpIGR3Qe0zsE+WNhAc4BCpgOjwnDGwgGwPMKogdE/M3B0P24XYZ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" alt="Projlab - Engenharia para Laboratórios">
+  <span class="header-badge">Controle de Multas &amp; Frotas</span>
+  <button type="button" class="btn-text" id="btnLogout" style="margin-left:auto;">Sair</button>
+</header>
+
+<nav class="tab-bar" id="tabBar">
+  <button class="tab-btn active" data-tab="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="19" x2="4" y2="11"/><line x1="12" y1="19" x2="12" y2="5"/><line x1="20" y1="19" x2="20" y2="14"/><line x1="2" y1="21" x2="22" y2="21"/></svg>
+    Dashboard
+  </button>
+  <button class="tab-btn" data-tab="multas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="15.8" r="0.4" fill="currentColor" stroke="none"/></svg>
+    Registrar Multa
+  </button>
+  <button class="tab-btn" data-tab="frota">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16 L5.5 10.5 Q6 9 7.5 9 H16.5 Q18 9 18.5 10.5 L20 16"/><rect x="2.5" y="16" width="19" height="4" rx="1"/><circle cx="7" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/></svg>
+    Gestão de Frota
+  </button>
+  <button class="tab-btn" data-tab="docs">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/></svg>
+    Documentações
+  </button>
+  <button class="tab-btn" data-tab="motoristas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20 Q5 14 12 14 Q19 14 19 20"/></svg>
+    Motoristas
+  </button>
+  <button class="tab-btn" data-tab="relatorios">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><path d="M8 10l4 4 4-4"/><path d="M4 18h16"/></svg>
+    Relatórios
+  </button>
+</nav>
+
+<main class="main">
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="tab-panel active" id="panel-dashboard">
+    <p class="page-intro">Visão geral da frota, das multas registradas e das documentações da Projlab.</p>
+
+    <div id="docAlertBox"></div>
+
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="panel">
+      <h2>Consultas oficiais</h2>
+      <p class="panel-sub">Confira direto no governo se há multas, pontos na CNH dos motoristas ou o CRLV atrasado — dados oficiais, de todo o Brasil, num só lugar.</p>
+      <a class="btn btn-primary" href="https://portalservicos.senatran.serpro.gov.br/" target="_blank" rel="noopener noreferrer">Abrir Portal SENATRAN ↗</a>
+      <p style="font-size:12.5px;color:var(--gray);margin-top:12px;margin-bottom:0;">Portal nacional do governo (SENATRAN/Serpro) — reúne infrações, CNH e CRLV. É necessário fazer login com uma conta gov.br.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h2>Veículos com mais multas</h2>
+        <p class="panel-sub">Ranking por quantidade de infrações registradas</p>
+        <div class="rank-list" id="rankVeiculos"></div>
+      </div>
+      <div class="panel">
+        <h2>Motoristas com mais infrações</h2>
+        <p class="panel-sub">Ranking por quantidade de infrações indicadas</p>
+        <div class="rank-list" id="rankMotoristas"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MULTAS ================= -->
+  <section class="tab-panel" id="panel-multas">
+    <p class="page-intro">Registre uma nova multa e acompanhe o histórico completo.</p>
+
+    <div class="panel">
+      <h2 id="multaFormTitle">Registrar nova multa</h2>
+      <div class="editing-flag" id="multaEditingFlag">
+        Editando registro existente
+        <button type="button" class="btn-text" id="multaCancelEdit" style="margin-left:auto;">Cancelar edição</button>
+      </div>
+      <form id="formMulta">
+        <div class="form-grid">
+          <div class="field">
+            <label for="multaPlaca">Veículo</label>
+            <select id="multaPlaca" required></select>
+          </div>
+          <div class="field">
+            <label for="multaMotorista">Motorista indicado</label>
+            <input type="text" id="multaMotorista" list="listaMotoristas" placeholder="Nome do motorista" required pattern="[A-Za-zÀ-ÿ\s.'-]+" title="Digite um nome válido, sem números">
+            <datalist id="listaMotoristas"></datalist>
+          </div>
+          <div class="field">
+            <label for="multaData">Data da infração</label>
+            <input type="date" id="multaData" required title="A data não pode ser no futuro">
+          </div>
+          <div class="field">
+            <label for="multaUF">Região (UF) do órgão autuador</label>
+            <select id="multaUF">
+              <option value="">Selecione (opcional)</option>
+              <option value="AC">Acre</option>
+              <option value="AL">Alagoas</option>
+              <option value="AP">Amapá</option>
+              <option value="AM">Amazonas</option>
+              <option value="BA">Bahia</option>
+              <option value="CE">Ceará</option>
+              <option value="DF">Distrito Federal</option>
+              <option value="ES">Espírito Santo</option>
+              <option value="GO">Goiás</option>
+              <option value="MA">Maranhão</option>
+              <option value="MT">Mato Grosso</option>
+              <option value="MS">Mato Grosso do Sul</option>
+              <option value="MG">Minas Gerais</option>
+              <option value="PA">Pará</option>
+              <option value="PB">Paraíba</option>
+              <option value="PR">Paraná</option>
+              <option value="PE">Pernambuco</option>
+              <option value="PI">Piauí</option>
+              <option value="RJ">Rio de Janeiro</option>
+              <option value="RN">Rio Grande do Norte</option>
+              <option value="RS">Rio Grande do Sul</option>
+              <option value="RO">Rondônia</option>
+              <option value="RR">Roraima</option>
+              <option value="SC">Santa Catarina</option>
+              <option value="SP">São Paulo</option>
+              <option value="SE">Sergipe</option>
+              <option value="TO">Tocantins</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Site para indicar o condutor</label>
+            <div class="uf-link-box" id="multaUFLinkBox">Selecione a região ao lado</div>
+          </div>
+          <div class="field">
+            <label for="multaTipo">Tipo de infração</label>
+            <select id="multaTipo" required>
+              <option value="">Selecione</option>
+              <option>Excesso de velocidade</option>
+              <option>Estacionamento irregular</option>
+              <option>Avanço de sinal vermelho</option>
+              <option>Uso de celular ao dirigir</option>
+              <option>Cinto de segurança</option>
+              <option>Faixa ou pista irregular</option>
+              <option>Documentação do veículo</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="multaClassificacao">Classificação (CTB)</label>
+            <select id="multaClassificacao" required>
+              <option value="">Selecione</option>
+              <option value="Leve">Leve — 3 pontos</option>
+              <option value="Média">Média — 4 pontos</option>
+              <option value="Grave">Grave — 5 pontos</option>
+              <option value="Gravíssima">Gravíssima — 7 pontos</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="multaValor">Valor (R$)</label>
+            <input type="number" id="multaValor" min="0" step="0.01" placeholder="0,00" required>
+          </div>
+          <div class="field">
+            <label for="multaStatus">Status</label>
+            <select id="multaStatus" required>
+              <option value="pendente">Pendente</option>
+              <option value="pago">Pago</option>
+            </select>
+          </div>
+          <div class="field span-2">
+            <label for="multaObs">Observações (opcional)</label>
+            <input type="text" id="multaObs" placeholder="Número do AIT, local, etc.">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="multaSubmitBtn">Registrar multa</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Histórico de multas</h2>
+      <p class="panel-sub" id="multaCountSub"></p>
+      <div class="table-wrap" id="multaTableWrap"></div>
+    </div>
+  </section>
+
+  <!-- ================= FROTA ================= -->
+  <section class="tab-panel" id="panel-frota">
+    <p class="page-intro">Cadastre os veículos da frota e mantenha os dados de responsáveis atualizados.</p>
+
+    <div class="panel">
+      <h2 id="frotaFormTitle">Cadastrar veículo</h2>
+      <div class="editing-flag" id="frotaEditingFlag">
+        Editando veículo existente
+        <button type="button" class="btn-text" id="frotaCancelEdit" style="margin-left:auto;">Cancelar edição</button>
+      </div>
+      <form id="formFrota">
+        <div class="form-grid">
+          <div class="field">
+            <label for="frotaPlaca">Placa</label>
+            <input type="text" id="frotaPlaca" placeholder="ABC-1D23" required style="text-transform:uppercase;" pattern="[A-Za-z]{3}-?[0-9][A-Za-z0-9][0-9]{2}" title="Placa no padrão antigo (ABC1234) ou Mercosul (ABC1D23), com ou sem traço">
+          </div>
+          <div class="field">
+            <label for="frotaModelo">Modelo</label>
+            <input type="text" id="frotaModelo" placeholder="Ex.: Fiat Strada" required>
+          </div>
+          <div class="field">
+            <label for="frotaAno">Ano</label>
+            <input type="number" id="frotaAno" min="1980" placeholder="2023" title="Ano entre 1980 e o próximo ano de fabricação">
+          </div>
+          <div class="field">
+            <label for="frotaCor">Cor</label>
+            <input type="text" id="frotaCor" placeholder="Branco" pattern="[A-Za-zÀ-ÿ\s]+" title="Digite o nome da cor, sem números">
+          </div>
+          <div class="field">
+            <label for="frotaResponsavel">Responsável</label>
+            <input type="text" id="frotaResponsavel" placeholder="Nome do colaborador" pattern="[A-Za-zÀ-ÿ\s.'-]+" title="Digite um nome válido, sem números">
+          </div>
+          <div class="field">
+            <label for="frotaStatus">Status</label>
+            <select id="frotaStatus" required>
+              <option value="ativo">Ativo</option>
+              <option value="manutencao">Em manutenção</option>
+              <option value="inativo">Inativo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="frotaSubmitBtn">Cadastrar veículo</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Veículos cadastrados</h2>
+      <p class="panel-sub" id="frotaCountSub"></p>
+      <div class="table-wrap" id="frotaTableWrap"></div>
+    </div>
+  </section>
+
+  <!-- ================= DOCUMENTAÇÕES ================= -->
+  <section class="tab-panel" id="panel-docs">
+    <p class="page-intro">Duas áreas separadas: documentação dos veículos e documentação dos motoristas.</p>
+
+    <div class="sub-tab-bar" id="docsSubTabBar">
+      <button type="button" class="sub-tab-btn active" data-subtab="veiculos">Documentos dos veículos</button>
+      <button type="button" class="sub-tab-btn" data-subtab="motoristas">Documentos dos motoristas</button>
+    </div>
+
+    <!-- ---- Sub-aba: somente veículos ---- -->
+    <div class="sub-tab-panel active" id="docsSub-veiculos">
+      <div class="panel">
+        <h2 id="docFormTitle">Registrar documento do veículo</h2>
+        <div class="editing-flag" id="docEditingFlag">
+          Editando documento existente
+          <button type="button" class="btn-text" id="docCancelEdit" style="margin-left:auto;">Cancelar edição</button>
+        </div>
+        <form id="formDoc">
+          <div class="form-grid">
+            <div class="field">
+              <label for="docPlaca">Veículo</label>
+              <select id="docPlaca" required></select>
+            </div>
+            <div class="field">
+              <label for="docTipo">Tipo de documento</label>
+              <select id="docTipo" required>
+                <option value="">Selecione</option>
+                <option>CRLV</option>
+                <option>Seguro</option>
+                <option>IPVA</option>
+                <option>Revisão</option>
+                <option>Inspeção veicular</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="docVencimento">Data de vencimento</label>
+              <input type="date" id="docVencimento" required>
+            </div>
+            <div class="field">
+              <label for="docArquivo">Foto ou PDF do documento (opcional)</label>
+              <input type="file" id="docArquivo" accept="image/*,application/pdf">
+            </div>
+          </div>
+          <div class="anexo-atual" id="docAnexoAtual"></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="docSubmitBtn">Registrar documento</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Documentos de veículos cadastrados</h2>
+        <p class="panel-sub" id="docCountSub"></p>
+        <div class="table-wrap" id="docTableWrap"></div>
+      </div>
+    </div>
+
+    <!-- ---- Sub-aba: somente motoristas ---- -->
+    <div class="sub-tab-panel" id="docsSub-motoristas">
+      <div class="panel">
+        <h2 id="motoristaDocFormTitle">Registrar documento do motorista</h2>
+        <div class="editing-flag" id="motoristaDocEditingFlag">
+          Editando documento existente
+          <button type="button" class="btn-text" id="motoristaDocCancelEdit" style="margin-left:auto;">Cancelar edição</button>
+        </div>
+        <form id="formMotoristaDoc">
+          <div class="form-grid">
+            <div class="field">
+              <label for="motoristaDocNome">Motorista</label>
+              <input type="text" id="motoristaDocNome" list="listaMotoristas" placeholder="Nome do motorista" required pattern="[A-Za-zÀ-ÿ\s.'-]+" title="Digite um nome válido, sem números">
+            </div>
+            <div class="field">
+              <label for="motoristaDocTipo">Tipo de documento</label>
+              <select id="motoristaDocTipo" required>
+                <option value="">Selecione</option>
+                <option>CNH</option>
+                <option>RG</option>
+                <option>CPF</option>
+                <option>Exame Toxicológico</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="motoristaDocNumero">Número (opcional)</label>
+              <input type="text" id="motoristaDocNumero" placeholder="Número do documento">
+            </div>
+            <div class="field">
+              <label for="motoristaDocVencimento">Vencimento (se houver)</label>
+              <input type="date" id="motoristaDocVencimento">
+            </div>
+            <div class="field">
+              <label for="motoristaDocArquivo">Foto ou PDF do documento (opcional)</label>
+              <input type="file" id="motoristaDocArquivo" accept="image/*,application/pdf">
+            </div>
+          </div>
+          <div class="anexo-atual" id="motoristaDocAnexoAtual"></div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="motoristaDocSubmitBtn">Registrar documento</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Documentos de motoristas cadastrados</h2>
+        <p class="panel-sub" id="motoristaDocCountSub"></p>
+        <div class="table-wrap" id="motoristaDocTableWrap"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MOTORISTAS ================= -->
+  <section class="tab-panel" id="panel-motoristas">
+    <p class="page-intro">Ranking completo de motoristas indicados em multas, do maior para o menor número de infrações.</p>
+
+    <div class="panel">
+      <div class="table-wrap" id="motoristaTableWrap"></div>
+    </div>
+  </section>
+
+  <!-- ================= RELATÓRIOS ================= -->
+  <section class="tab-panel" id="panel-relatorios">
+    <p class="page-intro">Resumo geral e exportação dos dados do sistema.</p>
+
+    <div class="panel">
+      <h2>Resumo mensal de multas</h2>
+      <p class="panel-sub">Quantidade e valor total de multas por mês</p>
+      <div class="table-wrap" id="resumoMensalWrap"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Infrações por classificação</h2>
+      <p class="panel-sub">Quantidade, pontos na CNH e valor total por nível de gravidade (CTB)</p>
+      <div class="table-wrap" id="classificacaoWrap"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Exportar dados</h2>
+      <p class="panel-sub">Os arquivos são gerados localmente e baixados diretamente no seu navegador</p>
+      <div class="export-grid">
+        <div class="export-card">
+          <h3>Multas (CSV)</h3>
+          <p>Histórico completo de multas para abrir no Excel.</p>
+          <button class="btn btn-outline" id="btnExportMultas">Baixar CSV</button>
+        </div>
+        <div class="export-card">
+          <h3>Frota (CSV)</h3>
+          <p>Lista de veículos cadastrados e seus responsáveis.</p>
+          <button class="btn btn-outline" id="btnExportFrota">Baixar CSV</button>
+        </div>
+        <div class="export-card">
+          <h3>Backup completo (JSON)</h3>
+          <p>Todos os dados do sistema, para backup ou migração.</p>
+          <button class="btn btn-outline" id="btnExportJSON">Baixar JSON</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">Projlab · Engenharia para Laboratórios — Sistema interno de controle de multas e frotas</footer>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- PWA: instalação no celular ---------------- */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function (err) {
+        console.error('Não foi possível registrar o service worker.', err);
+      });
+    });
+  }
+
+  /* ---------------- Supabase ---------------- */
+  var SUPABASE_URL = 'https://xthcwrxhfshrpvzmlvma.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_8vCGcwT1INmUooUQbaIFdg_NVkrpuXX';
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  var state = { frota: [], multas: [], docs: [], motoristasDocs: [] };
+
+  /* ---------------- Helpers de formatação ---------------- */
+  function fmtBRL(v) {
+    return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+  function todayISO() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+  function daysUntil(iso) {
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var target = new Date(iso + 'T00:00:00');
+    return Math.round((target - today) / 86400000);
+  }
+  function escapeHTML(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function erroMsg(err) {
+    return (err && err.message) ? err.message : 'Erro desconhecido, tente novamente.';
+  }
+  document.getElementById('multaData').value = todayISO();
+  document.getElementById('multaData').max = todayISO();
+  document.getElementById('frotaAno').max = String(new Date().getFullYear() + 1);
+
+  /* Validação de CPF (dígitos verificadores), conforme o algoritmo oficial */
+  function cpfValido(cpf) {
+    cpf = String(cpf || '').replace(/[^\d]/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    var soma = 0, i, resto;
+    for (i = 1; i <= 9; i++) soma += parseInt(cpf.charAt(i - 1), 10) * (11 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(cpf.charAt(9), 10)) return false;
+    soma = 0;
+    for (i = 1; i <= 10; i++) soma += parseInt(cpf.charAt(i - 1), 10) * (12 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    return resto === parseInt(cpf.charAt(10), 10);
+  }
+
+  /* Ajusta a validação do campo "Número" conforme o tipo de documento escolhido */
+  function updateNumeroDocPattern() {
+    var tipo = document.getElementById('motoristaDocTipo').value;
+    var campo = document.getElementById('motoristaDocNumero');
+    campo.setCustomValidity('');
+    if (tipo === 'CNH') {
+      campo.pattern = '[0-9]{11}';
+      campo.maxLength = 11;
+      campo.placeholder = 'Somente números, 11 dígitos';
+      campo.title = 'CNH: 11 números, sem pontos ou traços';
+    } else if (tipo === 'CPF') {
+      campo.pattern = '[0-9.]{11,14}';
+      campo.maxLength = 14;
+      campo.placeholder = '000.000.000-00';
+      campo.title = 'CPF válido, com ou sem pontuação';
+    } else if (tipo === 'RG') {
+      campo.pattern = '[0-9A-Za-z.\\-]{5,15}';
+      campo.maxLength = 15;
+      campo.placeholder = 'Número do RG';
+      campo.title = 'Número do RG (pode incluir pontos, traço ou dígito verificador)';
+    } else {
+      campo.removeAttribute('pattern');
+      campo.maxLength = 30;
+      campo.placeholder = 'Número do documento';
+      campo.title = '';
+    }
+  }
+  document.getElementById('motoristaDocTipo').addEventListener('change', updateNumeroDocPattern);
+
+  /* Pontuação na CNH por classificação da infração, conforme o CTB (art. 259) */
+  var PONTOS_POR_CLASSIFICACAO = { 'Leve': 3, 'Média': 4, 'Grave': 5, 'Gravíssima': 7 };
+  function pontosDaMulta(m) { return PONTOS_POR_CLASSIFICACAO[m.classificacao] || 0; }
+  function classificacaoPill(c) {
+    var cls = { 'Leve': 'pill-ok', 'Média': 'pill-neutral', 'Grave': 'pill-warn', 'Gravíssima': 'pill-danger' }[c];
+    if (!cls) return '<span class="pill pill-neutral">Não classificada</span>';
+    return '<span class="pill ' + cls + '">' + escapeHTML(c) + '</span>';
+  }
+
+  /* Sites oficiais dos Detrans estaduais, para indicação de condutor infrator */
+  var DETRAN_POR_UF = {
+    AC: 'https://www.detran.ac.gov.br/', AL: 'https://www.detran.al.gov.br/', AP: 'https://www.detran.ap.gov.br/',
+    AM: 'https://www.detran.am.gov.br/', BA: 'https://www.detran.ba.gov.br/', CE: 'https://www.detran.ce.gov.br/',
+    DF: 'https://www.detran.df.gov.br/', ES: 'https://www.detran.es.gov.br/', GO: 'https://www.detran.go.gov.br/',
+    MA: 'https://www.detran.ma.gov.br/', MT: 'https://www.detran.mt.gov.br/', MS: 'https://www.detran.ms.gov.br/',
+    MG: 'https://www.detran.mg.gov.br/', PA: 'https://www.detran.pa.gov.br/', PB: 'https://www.detran.pb.gov.br/',
+    PR: 'https://www.detran.pr.gov.br/', PE: 'https://www.detran.pe.gov.br/', PI: 'https://www.detran.pi.gov.br/',
+    RJ: 'https://www.detran.rj.gov.br/', RN: 'https://www.detran.rn.gov.br/', RS: 'https://www.detran.rs.gov.br/',
+    RO: 'https://www.detran.ro.gov.br/', RR: 'https://www.detran.rr.gov.br/', SC: 'https://www.detran.sc.gov.br/',
+    SP: 'https://www.detran.sp.gov.br/', SE: 'https://www.detran.se.gov.br/', TO: 'https://www.detran.to.gov.br/'
+  };
+  function linkDetranHTML(uf) {
+    if (!uf || !DETRAN_POR_UF[uf]) return '';
+    return '<a href="' + DETRAN_POR_UF[uf] + '" target="_blank" rel="noopener noreferrer">Detran-' + uf + ' — indicar condutor ↗</a>';
+  }
+  function ufCelulaTabela(uf) {
+    if (!uf || !DETRAN_POR_UF[uf]) return '—';
+    return '<a href="' + DETRAN_POR_UF[uf] + '" target="_blank" rel="noopener noreferrer">' + uf + ' ↗</a>';
+  }
+  function updateMultaUFLinkBox() {
+    var uf = document.getElementById('multaUF').value;
+    var link = linkDetranHTML(uf);
+    document.getElementById('multaUFLinkBox').innerHTML = link || 'Selecione a região ao lado';
+  }
+  document.getElementById('multaUF').addEventListener('change', updateMultaUFLinkBox);
+
+  /* ---------------- Navegação por abas ---------------- */
+  var tabBar = document.getElementById('tabBar');
+  tabBar.addEventListener('click', function (e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    showTab(btn.dataset.tab);
+  });
+  function showTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    document.querySelectorAll('.tab-panel').forEach(function (p) {
+      p.classList.toggle('active', p.id === 'panel-' + name);
+    });
+  }
+
+  function showDocsSubTab(name) {
+    document.querySelectorAll('#docsSubTabBar .sub-tab-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.subtab === name);
+    });
+    document.querySelectorAll('.sub-tab-panel').forEach(function (p) {
+      p.classList.toggle('active', p.id === 'docsSub-' + name);
+    });
+  }
+  document.getElementById('docsSubTabBar').addEventListener('click', function (e) {
+    var btn = e.target.closest('.sub-tab-btn');
+    if (!btn) return;
+    showDocsSubTab(btn.dataset.subtab);
+  });
+
+  /* ---------------- Autenticação ---------------- */
+  var loginScreen = document.getElementById('loginScreen');
+  var appRoot = document.getElementById('appRoot');
+  var formLogin = document.getElementById('formLogin');
+  var loginError = document.getElementById('loginError');
+  var loginSubmitBtn = document.getElementById('loginSubmitBtn');
+
+  function showLoginScreen() {
+    loginScreen.style.display = 'flex';
+    appRoot.style.display = 'none';
+  }
+  function showApp() {
+    loginScreen.style.display = 'none';
+    appRoot.style.display = 'block';
+  }
+
+  formLogin.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    loginError.textContent = '';
+    loginSubmitBtn.disabled = true;
+    loginSubmitBtn.textContent = 'Entrando…';
+    var email = document.getElementById('loginEmail').value.trim();
+    var senha = document.getElementById('loginSenha').value;
+    try {
+      var res = await sb.auth.signInWithPassword({ email: email, password: senha });
+      if (res.error) {
+        loginError.textContent = 'E-mail ou senha incorretos.';
+      }
+      // login com sucesso: onAuthStateChange cuida de mostrar o app
+    } catch (err) {
+      loginError.textContent = 'Não foi possível entrar. Verifique sua conexão com a internet.';
+    } finally {
+      loginSubmitBtn.disabled = false;
+      loginSubmitBtn.textContent = 'Entrar';
+    }
+  });
+
+  document.getElementById('btnLogout').addEventListener('click', async function () {
+    await sb.auth.signOut();
+  });
+
+  sb.auth.onAuthStateChange(function (event, session) {
+    if (session) {
+      showApp();
+      carregarTudo();
+    } else {
+      showLoginScreen();
+    }
+  });
+
+  /* ---------------- Selects dependentes da frota ---------------- */
+  function refreshVeiculoSelects() {
+    var selects = [document.getElementById('multaPlaca'), document.getElementById('docPlaca')];
+    selects.forEach(function (sel) {
+      if (!sel) return;
+      var current = sel.value;
+      var opts = '<option value="">Selecione</option>' +
+        state.frota.map(function (v) {
+          return '<option value="' + escapeHTML(v.placa) + '">' + escapeHTML(v.placa) + ' — ' + escapeHTML(v.modelo || '') + '</option>';
+        }).join('') +
+        '<option value="__novo__">+ Cadastrar novo veículo</option>';
+      sel.innerHTML = opts;
+      if (current && state.frota.some(function (v) { return v.placa === current; })) sel.value = current;
+    });
+  }
+
+  /* Cadastro rápido de veículo, sem sair do formulário de multa ou de documento */
+  [document.getElementById('multaPlaca'), document.getElementById('docPlaca')].forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      if (sel.value === '__novo__') abrirCadastroRapidoVeiculo(sel);
+    });
+  });
+
+  function abrirCadastroRapidoVeiculo(select) {
+    var antigo = document.getElementById('quickAddVeiculo');
+    if (antigo) antigo.remove();
+
+    var panel = document.createElement('div');
+    panel.id = 'quickAddVeiculo';
+    panel.className = 'quick-add-panel';
+    panel.innerHTML =
+      '<p class="quick-add-title">Cadastrar novo veículo</p>' +
+      '<div class="quick-add-row">' +
+        '<input type="text" id="qaPlaca" placeholder="Placa" style="text-transform:uppercase;" pattern="[A-Za-z]{3}-?[0-9][A-Za-z0-9][0-9]{2}" title="Placa no padrão antigo (ABC1234) ou Mercosul (ABC1D23)">' +
+        '<input type="text" id="qaModelo" placeholder="Modelo (opcional)">' +
+        '<button type="button" class="btn btn-primary" id="qaConfirmar">Cadastrar</button>' +
+        '<button type="button" class="btn-text" id="qaCancelar">Cancelar</button>' +
+      '</div>' +
+      '<p class="quick-add-erro" id="qaErro"></p>';
+
+    select.closest('.field').insertAdjacentElement('afterend', panel);
+    document.getElementById('qaPlaca').focus();
+
+    document.getElementById('qaCancelar').addEventListener('click', function () {
+      panel.remove();
+      select.value = '';
+    });
+
+    document.getElementById('qaConfirmar').addEventListener('click', async function () {
+      var placa = document.getElementById('qaPlaca').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      var erro = document.getElementById('qaErro');
+      erro.textContent = '';
+      if (!/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(placa)) {
+        erro.textContent = 'Placa inválida. Use o padrão ABC1234 ou ABC1D23.';
+        return;
+      }
+      if (state.frota.some(function (v) { return v.placa === placa; })) {
+        erro.textContent = 'Já existe um veículo cadastrado com essa placa.';
+        return;
+      }
+      var btn = document.getElementById('qaConfirmar');
+      btn.disabled = true;
+      try {
+        var novo = await dbInsert('frota', {
+          placa: placa,
+          modelo: document.getElementById('qaModelo').value.trim(),
+          status: 'ativo'
+        });
+        state.frota.push(novo);
+        renderAll();
+        select.value = placa;
+        panel.innerHTML =
+          '<p class="quick-add-title">Veículo ' + escapeHTML(placa) + ' cadastrado ✓</p>' +
+          '<p style="font-size:13px; color:var(--gray); margin:0 0 4px;">Faltou ano, cor, responsável ou status? Dá pra completar agora ou depois, quando quiser.</p>' +
+          '<div class="quick-add-row">' +
+            '<button type="button" class="btn btn-primary" id="qaCompletar">Completar dados agora</button>' +
+            '<button type="button" class="btn-text" id="qaFechar">Continuar aqui</button>' +
+          '</div>';
+        document.getElementById('qaFechar').addEventListener('click', function () { panel.remove(); });
+        document.getElementById('qaCompletar').addEventListener('click', function () {
+          panel.remove();
+          abrirEdicaoVeiculo(novo);
+        });
+      } catch (err) {
+        erro.textContent = 'Não foi possível cadastrar: ' + erroMsg(err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  function refreshMotoristaDatalist() {
+    var names = Array.from(new Set(
+      state.multas.map(function (m) { return m.motorista; })
+        .concat(state.motoristasDocs.map(function (d) { return d.nome; }))
+        .filter(Boolean)
+    ));
+    document.getElementById('listaMotoristas').innerHTML = names.map(function (n) {
+      return '<option value="' + escapeHTML(n) + '">';
+    }).join('');
+  }
+
+  /* ---------------- Acesso a dados (Supabase) ---------------- */
+  async function dbList(table, orderCol) {
+    var res = await sb.from(table).select('*').order(orderCol, { ascending: true });
+    if (res.error) throw res.error;
+    return res.data || [];
+  }
+  async function dbInsert(table, payload) {
+    var res = await sb.from(table).insert(payload).select().single();
+    if (res.error) throw res.error;
+    return res.data;
+  }
+  async function dbUpdate(table, id, payload) {
+    var res = await sb.from(table).update(payload).eq('id', id);
+    if (res.error) throw res.error;
+  }
+  async function dbDelete(table, id) {
+    var res = await sb.from(table).delete().eq('id', id);
+    if (res.error) throw res.error;
+  }
+
+  /* ---------------- Anexos (Supabase Storage) ---------------- */
+  async function uploadArquivo(file, pasta) {
+    var ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '';
+    var path = pasta + '/' + crypto.randomUUID() + ext;
+    var res = await sb.storage.from('documentos').upload(path, file);
+    if (res.error) throw res.error;
+    return path;
+  }
+  async function removerArquivo(path) {
+    if (!path) return;
+    try { await sb.storage.from('documentos').remove([path]); }
+    catch (err) { console.error('Não foi possível remover o anexo antigo.', err); }
+  }
+  async function abrirAnexo(path) {
+    try {
+      var res = await sb.storage.from('documentos').createSignedUrl(path, 300);
+      if (res.error) throw res.error;
+      window.open(res.data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      alert('Não foi possível abrir o anexo: ' + erroMsg(err));
+    }
+  }
+
+  async function carregarTudo() {
+    document.querySelectorAll('.table-wrap').forEach(function (w) {
+      w.innerHTML = '<div class="loading-msg">Carregando…</div>';
+    });
+    try {
+      var resultados = await Promise.all([
+        dbList('frota', 'placa'),
+        dbList('multas', 'data'),
+        dbList('documentos_veiculos', 'vencimento'),
+        dbList('documentos_motoristas', 'nome')
+      ]);
+      state.frota = resultados[0];
+      state.multas = resultados[1];
+      state.docs = resultados[2];
+      state.motoristasDocs = resultados[3];
+    } catch (err) {
+      alert('Não foi possível carregar os dados do servidor: ' + erroMsg(err));
+    }
+    renderAll();
+  }
+
+  /* ================= DASHBOARD ================= */
+  function renderDashboard() {
+    var totalMultas = state.multas.length;
+    var pendentes = state.multas.filter(function (m) { return m.status === 'pendente'; });
+    var valorTotal = state.multas.reduce(function (s, m) { return s + (Number(m.valor) || 0); }, 0);
+    var valorPendente = pendentes.reduce(function (s, m) { return s + (Number(m.valor) || 0); }, 0);
+
+    var stats = [
+      { label: 'Multas registradas', value: totalMultas, mono: true },
+      { label: 'Multas pendentes', value: pendentes.length, danger: pendentes.length > 0 },
+      { label: 'Valor total em multas', value: fmtBRL(valorTotal) },
+      { label: 'Valor pendente', value: fmtBRL(valorPendente), danger: valorPendente > 0 }
+    ];
+    document.getElementById('statGrid').innerHTML = stats.map(function (s) {
+      return '<div class="stat-panel' + (s.danger ? ' is-danger' : '') + '">' +
+        '<div class="stat-value">' + s.value + '</div>' +
+        '<div class="stat-label">' + s.label + '</div></div>';
+    }).join('');
+
+    // Alerta de documentos vencendo/vencidos (veículos + motoristas, juntos)
+    var alertsVeiculos = state.docs.map(function (d) {
+      return { label: d.placa, tipo: d.tipo, dias: daysUntil(d.vencimento) };
+    }).filter(function (x) { return x.dias <= 30; });
+    var alertsMotoristas = state.motoristasDocs.filter(function (d) { return d.vencimento; }).map(function (d) {
+      return { label: d.nome, tipo: d.tipo, dias: daysUntil(d.vencimento) };
+    }).filter(function (x) { return x.dias <= 30; });
+    var alerts = alertsVeiculos.concat(alertsMotoristas).sort(function (a, b) { return a.dias - b.dias; });
+
+    var alertBox = document.getElementById('docAlertBox');
+    if (alerts.length === 0) {
+      alertBox.innerHTML = '';
+    } else {
+      var items = alerts.slice(0, 6).map(function (x) {
+        var texto = x.dias < 0 ? 'venceu há ' + Math.abs(x.dias) + ' dia(s)' : (x.dias === 0 ? 'vence hoje' : 'vence em ' + x.dias + ' dia(s)');
+        return '<li><strong>' + escapeHTML(x.label) + '</strong> — ' + escapeHTML(x.tipo) + ' ' + texto + '</li>';
+      }).join('');
+      alertBox.innerHTML = '<div class="alert-box">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 16.5v.1"/><path d="M10.3 4.4 2.6 18a1.6 1.6 0 0 0 1.4 2.4h16a1.6 1.6 0 0 0 1.4-2.4L13.7 4.4a1.6 1.6 0 0 0-2.8 0Z"/></svg>' +
+        '<div><strong>' + alerts.length + ' documento(s) precisam de atenção</strong><ul>' + items + '</ul></div></div>';
+    }
+
+    // Rankings
+    function renderRank(containerId, entries) {
+      var el = document.getElementById(containerId);
+      if (entries.length === 0) {
+        el.innerHTML = '<div class="empty-state"><p>Nenhuma multa registrada ainda.</p></div>';
+        return;
+      }
+      var max = Math.max.apply(null, entries.map(function (e) { return e.count; }));
+      el.innerHTML = entries.slice(0, 5).map(function (e) {
+        var pct = Math.max(6, Math.round((e.count / max) * 100));
+        return '<div class="rank-row"><div class="rank-name" title="' + escapeHTML(e.name) + '">' + escapeHTML(e.name) + '</div>' +
+          '<div class="rank-track"><div class="rank-fill" style="width:' + pct + '%"></div></div>' +
+          '<div class="rank-value">' + e.count + '</div></div>';
+      }).join('');
+    }
+
+    var byVeiculo = {};
+    state.multas.forEach(function (m) { byVeiculo[m.placa] = (byVeiculo[m.placa] || 0) + 1; });
+    var veiculoEntries = Object.keys(byVeiculo).map(function (k) { return { name: k, count: byVeiculo[k] }; })
+      .sort(function (a, b) { return b.count - a.count; });
+    renderRank('rankVeiculos', veiculoEntries);
+
+    var byMotorista = {};
+    state.multas.forEach(function (m) { byMotorista[m.motorista] = (byMotorista[m.motorista] || 0) + 1; });
+    var motoristaEntries = Object.keys(byMotorista).map(function (k) { return { name: k, count: byMotorista[k] }; })
+      .sort(function (a, b) { return b.count - a.count; });
+    renderRank('rankMotoristas', motoristaEntries);
+  }
+
+  /* ================= MULTAS ================= */
+  var multaEditingId = null;
+  var formMulta = document.getElementById('formMulta');
+  var multaCancelBtn = document.getElementById('multaCancelEdit');
+
+  function resetMultaForm() {
+    multaEditingId = null;
+    formMulta.reset();
+    document.getElementById('multaStatus').value = 'pendente';
+    document.getElementById('multaData').value = todayISO();
+    document.getElementById('multaFormTitle').textContent = 'Registrar nova multa';
+    document.getElementById('multaSubmitBtn').textContent = 'Registrar multa';
+    document.getElementById('multaEditingFlag').classList.remove('active');
+    updateMultaUFLinkBox();
+  }
+  multaCancelBtn.addEventListener('click', resetMultaForm);
+
+  formMulta.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var payload = {
+      placa: document.getElementById('multaPlaca').value,
+      motorista: document.getElementById('multaMotorista').value.trim(),
+      data: document.getElementById('multaData').value,
+      uf: document.getElementById('multaUF').value || null,
+      tipo: document.getElementById('multaTipo').value,
+      classificacao: document.getElementById('multaClassificacao').value,
+      valor: parseFloat(document.getElementById('multaValor').value) || 0,
+      status: document.getElementById('multaStatus').value,
+      obs: document.getElementById('multaObs').value.trim()
+    };
+    if (!payload.placa || !payload.motorista || !payload.data || !payload.tipo || !payload.classificacao) return;
+
+    var btn = document.getElementById('multaSubmitBtn');
+    btn.disabled = true;
+    try {
+      if (multaEditingId) {
+        await dbUpdate('multas', multaEditingId, payload);
+        var idx = state.multas.findIndex(function (m) { return m.id === multaEditingId; });
+        if (idx > -1) state.multas[idx] = Object.assign({}, state.multas[idx], payload);
+      } else {
+        var novo = await dbInsert('multas', payload);
+        state.multas.push(novo);
+      }
+      resetMultaForm();
+      renderAll();
+    } catch (err) {
+      alert('Não foi possível salvar a multa: ' + erroMsg(err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function renderMultas() {
+    var wrap = document.getElementById('multaTableWrap');
+    document.getElementById('multaCountSub').textContent =
+      state.multas.length === 0 ? '' : state.multas.length + ' multa(s) registrada(s)';
+
+    if (state.multas.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Nenhuma multa registrada ainda. Use o formulário acima para adicionar a primeira.</p></div>';
+      return;
+    }
+    var rows = state.multas.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); });
+    wrap.innerHTML = '<table><thead><tr>' +
+      '<th>Data</th><th>Veículo</th><th>Motorista</th><th>UF</th><th>Tipo</th><th>Classificação</th><th class="num">Valor</th><th>Status</th><th></th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (m) {
+        var pill = m.status === 'pago' ? '<span class="pill pill-ok">Pago</span>' : '<span class="pill pill-danger">Pendente</span>';
+        return '<tr data-id="' + m.id + '">' +
+          '<td>' + fmtDate(m.data) + '</td>' +
+          '<td>' + escapeHTML(m.placa) + '</td>' +
+          '<td>' + escapeHTML(m.motorista) + '</td>' +
+          '<td>' + ufCelulaTabela(m.uf) + '</td>' +
+          '<td>' + escapeHTML(m.tipo) + '</td>' +
+          '<td>' + classificacaoPill(m.classificacao) + '</td>' +
+          '<td class="num">' + fmtBRL(m.valor) + '</td>' +
+          '<td>' + pill + '</td>' +
+          '<td class="actions">' +
+          '<button type="button" class="btn-text" data-action="toggle-status">' + (m.status === 'pago' ? 'Marcar pendente' : 'Marcar pago') + '</button>' +
+          '<button type="button" class="btn-text" data-action="edit">Editar</button>' +
+          '<button type="button" class="btn-text" data-action="delete" style="color:var(--danger);">Excluir</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  document.getElementById('multaTableWrap').addEventListener('click', async function (e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var id = tr.dataset.id;
+    var idx = state.multas.findIndex(function (m) { return m.id === id; });
+    if (idx === -1) return;
+
+    if (btn.dataset.action === 'delete') {
+      if (!confirm('Excluir esta multa?')) return;
+      try {
+        await dbDelete('multas', id);
+        state.multas.splice(idx, 1);
+        renderAll();
+      } catch (err) {
+        alert('Não foi possível excluir a multa: ' + erroMsg(err));
+      }
+    } else if (btn.dataset.action === 'toggle-status') {
+      var novoStatus = state.multas[idx].status === 'pago' ? 'pendente' : 'pago';
+      try {
+        await dbUpdate('multas', id, { status: novoStatus });
+        state.multas[idx].status = novoStatus;
+        renderAll();
+      } catch (err) {
+        alert('Não foi possível atualizar o status: ' + erroMsg(err));
+      }
+    } else if (btn.dataset.action === 'edit') {
+      var m = state.multas[idx];
+      multaEditingId = m.id;
+      refreshVeiculoSelects();
+      document.getElementById('multaPlaca').value = m.placa;
+      document.getElementById('multaMotorista').value = m.motorista;
+      document.getElementById('multaData').value = m.data;
+      document.getElementById('multaUF').value = m.uf || '';
+      updateMultaUFLinkBox();
+      document.getElementById('multaTipo').value = m.tipo;
+      document.getElementById('multaClassificacao').value = m.classificacao || '';
+      document.getElementById('multaValor').value = m.valor;
+      document.getElementById('multaStatus').value = m.status;
+      document.getElementById('multaObs').value = m.obs || '';
+      document.getElementById('multaFormTitle').textContent = 'Editar multa';
+      document.getElementById('multaSubmitBtn').textContent = 'Salvar alterações';
+      document.getElementById('multaEditingFlag').classList.add('active');
+      showTab('multas');
+      document.getElementById('formMulta').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  /* ================= FROTA ================= */
+  var frotaEditingId = null;
+  var formFrota = document.getElementById('formFrota');
+
+  function resetFrotaForm() {
+    frotaEditingId = null;
+    formFrota.reset();
+    document.getElementById('frotaStatus').value = 'ativo';
+    document.getElementById('frotaFormTitle').textContent = 'Cadastrar veículo';
+    document.getElementById('frotaSubmitBtn').textContent = 'Cadastrar veículo';
+    document.getElementById('frotaEditingFlag').classList.remove('active');
+  }
+  document.getElementById('frotaCancelEdit').addEventListener('click', resetFrotaForm);
+
+  formFrota.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var placa = document.getElementById('frotaPlaca').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!placa) return;
+    var duplicate = state.frota.some(function (v) { return v.placa === placa && v.id !== frotaEditingId; });
+    if (duplicate) { alert('Já existe um veículo cadastrado com esta placa.'); return; }
+
+    var payload = {
+      placa: placa,
+      modelo: document.getElementById('frotaModelo').value.trim(),
+      ano: document.getElementById('frotaAno').value,
+      cor: document.getElementById('frotaCor').value.trim(),
+      responsavel: document.getElementById('frotaResponsavel').value.trim(),
+      status: document.getElementById('frotaStatus').value
+    };
+
+    var btn = document.getElementById('frotaSubmitBtn');
+    btn.disabled = true;
+    try {
+      if (frotaEditingId) {
+        await dbUpdate('frota', frotaEditingId, payload);
+        var idx = state.frota.findIndex(function (v) { return v.id === frotaEditingId; });
+        if (idx > -1) state.frota[idx] = Object.assign({}, state.frota[idx], payload);
+      } else {
+        var novo = await dbInsert('frota', payload);
+        state.frota.push(novo);
+      }
+      resetFrotaForm();
+      renderAll();
+    } catch (err) {
+      alert('Não foi possível salvar o veículo: ' + erroMsg(err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function statusFrotaPill(status) {
+    if (status === 'ativo') return '<span class="pill pill-ok">Ativo</span>';
+    if (status === 'manutencao') return '<span class="pill pill-warn">Manutenção</span>';
+    return '<span class="pill pill-neutral">Inativo</span>';
+  }
+
+  function renderFrota() {
+    var wrap = document.getElementById('frotaTableWrap');
+    document.getElementById('frotaCountSub').textContent =
+      state.frota.length === 0 ? '' : state.frota.length + ' veículo(s) cadastrado(s)';
+
+    if (state.frota.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Nenhum veículo cadastrado ainda. Cadastre o primeiro veículo da frota acima.</p></div>';
+      return;
+    }
+    wrap.innerHTML = '<table><thead><tr>' +
+      '<th>Placa</th><th>Modelo</th><th>Ano</th><th>Cor</th><th>Responsável</th><th>Status</th><th class="num">Multas</th><th></th>' +
+      '</tr></thead><tbody>' +
+      state.frota.map(function (v) {
+        var qtdMultas = state.multas.filter(function (m) { return m.placa === v.placa; }).length;
+        return '<tr data-id="' + v.id + '">' +
+          '<td class="num">' + escapeHTML(v.placa) + '</td>' +
+          '<td>' + escapeHTML(v.modelo) + '</td>' +
+          '<td class="num">' + escapeHTML(v.ano || '—') + '</td>' +
+          '<td>' + escapeHTML(v.cor || '—') + '</td>' +
+          '<td>' + escapeHTML(v.responsavel || '—') + '</td>' +
+          '<td>' + statusFrotaPill(v.status) + '</td>' +
+          '<td class="num">' + qtdMultas + '</td>' +
+          '<td class="actions">' +
+          '<button type="button" class="btn-text" data-action="edit">Editar</button>' +
+          '<button type="button" class="btn-text" data-action="delete" style="color:var(--danger);">Excluir</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function abrirEdicaoVeiculo(v) {
+    frotaEditingId = v.id;
+    document.getElementById('frotaPlaca').value = v.placa;
+    document.getElementById('frotaModelo').value = v.modelo;
+    document.getElementById('frotaAno').value = v.ano || '';
+    document.getElementById('frotaCor').value = v.cor || '';
+    document.getElementById('frotaResponsavel').value = v.responsavel || '';
+    document.getElementById('frotaStatus').value = v.status;
+    document.getElementById('frotaFormTitle').textContent = 'Editar veículo';
+    document.getElementById('frotaSubmitBtn').textContent = 'Salvar alterações';
+    document.getElementById('frotaEditingFlag').classList.add('active');
+    showTab('frota');
+    document.getElementById('formFrota').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.getElementById('frotaTableWrap').addEventListener('click', async function (e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var id = tr.dataset.id;
+    var idx = state.frota.findIndex(function (v) { return v.id === id; });
+    if (idx === -1) return;
+
+    if (btn.dataset.action === 'delete') {
+      if (!confirm('Excluir este veículo? Multas e documentos já registrados serão mantidos.')) return;
+      try {
+        await dbDelete('frota', id);
+        state.frota.splice(idx, 1);
+        renderAll();
+      } catch (err) {
+        alert('Não foi possível excluir o veículo: ' + erroMsg(err));
+      }
+    } else if (btn.dataset.action === 'edit') {
+      abrirEdicaoVeiculo(state.frota[idx]);
+    }
+  });
+
+  /* ================= DOCUMENTAÇÕES ================= */
+  var docEditingId = null;
+  var formDoc = document.getElementById('formDoc');
+
+  function resetDocForm() {
+    docEditingId = null;
+    formDoc.reset();
+    document.getElementById('docFormTitle').textContent = 'Registrar documento';
+    document.getElementById('docSubmitBtn').textContent = 'Registrar documento';
+    document.getElementById('docEditingFlag').classList.remove('active');
+    document.getElementById('docAnexoAtual').innerHTML = '';
+  }
+  document.getElementById('docCancelEdit').addEventListener('click', resetDocForm);
+
+  formDoc.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var payload = {
+      placa: document.getElementById('docPlaca').value,
+      tipo: document.getElementById('docTipo').value,
+      vencimento: document.getElementById('docVencimento').value
+    };
+    if (!payload.placa || !payload.tipo || !payload.vencimento) return;
+
+    var arquivo = document.getElementById('docArquivo').files[0];
+    var btn = document.getElementById('docSubmitBtn');
+    btn.disabled = true;
+    try {
+      if (arquivo) {
+        payload.arquivo_path = await uploadArquivo(arquivo, 'veiculos');
+      }
+      if (docEditingId) {
+        await dbUpdate('documentos_veiculos', docEditingId, payload);
+        var idx = state.docs.findIndex(function (d) { return d.id === docEditingId; });
+        if (idx > -1) state.docs[idx] = Object.assign({}, state.docs[idx], payload);
+      } else {
+        var novo = await dbInsert('documentos_veiculos', payload);
+        state.docs.push(novo);
+      }
+      resetDocForm();
+      renderAll();
+    } catch (err) {
+      alert('Não foi possível salvar o documento: ' + erroMsg(err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function anexoCelulaTabela(path) {
+    if (!path) return '—';
+    return '<button type="button" class="btn-text" data-action="ver-anexo" data-path="' + escapeHTML(path) + '">Ver anexo</button>';
+  }
+
+  function statusDoc(vencimento) {
+    var dias = daysUntil(vencimento);
+    if (dias < 0) return { label: 'Vencido', cls: 'pill-danger' };
+    if (dias <= 30) return { label: 'Vencendo', cls: 'pill-warn' };
+    return { label: 'Válido', cls: 'pill-ok' };
+  }
+
+  function renderDocs() {
+    var wrap = document.getElementById('docTableWrap');
+    document.getElementById('docCountSub').textContent =
+      state.docs.length === 0 ? '' : state.docs.length + ' documento(s) cadastrado(s)';
+
+    if (state.docs.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Nenhum documento cadastrado ainda. Registre CRLV, seguro, IPVA ou revisão acima.</p></div>';
+      return;
+    }
+    var rows = state.docs.slice().sort(function (a, b) { return (a.vencimento || '').localeCompare(b.vencimento || ''); });
+    wrap.innerHTML = '<table><thead><tr>' +
+      '<th>Veículo</th><th>Tipo</th><th>Vencimento</th><th>Status</th><th>Anexo</th><th></th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (d) {
+        var st = statusDoc(d.vencimento);
+        return '<tr data-id="' + d.id + '">' +
+          '<td>' + escapeHTML(d.placa) + '</td>' +
+          '<td>' + escapeHTML(d.tipo) + '</td>' +
+          '<td>' + fmtDate(d.vencimento) + '</td>' +
+          '<td><span class="pill ' + st.cls + '">' + st.label + '</span></td>' +
+          '<td>' + anexoCelulaTabela(d.arquivo_path) + '</td>' +
+          '<td class="actions">' +
+          '<button type="button" class="btn-text" data-action="edit">Editar</button>' +
+          '<button type="button" class="btn-text" data-action="delete" style="color:var(--danger);">Excluir</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  document.getElementById('docTableWrap').addEventListener('click', async function (e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var id = tr.dataset.id;
+    var idx = state.docs.findIndex(function (d) { return d.id === id; });
+    if (idx === -1) return;
+
+    if (btn.dataset.action === 'delete') {
+      if (!confirm('Excluir este documento?')) return;
+      try {
+        await dbDelete('documentos_veiculos', id);
+        await removerArquivo(state.docs[idx].arquivo_path);
+        state.docs.splice(idx, 1);
+        renderAll();
+      } catch (err) {
+        alert('Não foi possível excluir: ' + erroMsg(err));
+      }
+    } else if (btn.dataset.action === 'ver-anexo') {
+      abrirAnexo(btn.dataset.path);
+    } else if (btn.dataset.action === 'edit') {
+      var d = state.docs[idx];
+      docEditingId = d.id;
+      refreshVeiculoSelects();
+      document.getElementById('docPlaca').value = d.placa;
+      document.getElementById('docTipo').value = d.tipo;
+      document.getElementById('docVencimento').value = d.vencimento;
+      document.getElementById('docFormTitle').textContent = 'Editar documento';
+      document.getElementById('docSubmitBtn').textContent = 'Salvar alterações';
+      document.getElementById('docEditingFlag').classList.add('active');
+      document.getElementById('docAnexoAtual').innerHTML = d.arquivo_path
+        ? 'Anexo atual: ' + anexoCelulaTabela(d.arquivo_path) + ' — envie um novo arquivo acima para substituir.'
+        : '';
+      showTab('docs');
+      showDocsSubTab('veiculos');
+      document.getElementById('formDoc').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  /* ================= DOCUMENTOS DE MOTORISTAS ================= */
+  var motoristaDocEditingId = null;
+  var formMotoristaDoc = document.getElementById('formMotoristaDoc');
+
+  function resetMotoristaDocForm() {
+    motoristaDocEditingId = null;
+    formMotoristaDoc.reset();
+    document.getElementById('motoristaDocFormTitle').textContent = 'Registrar documento do motorista';
+    document.getElementById('motoristaDocSubmitBtn').textContent = 'Registrar documento';
+    document.getElementById('motoristaDocEditingFlag').classList.remove('active');
+    document.getElementById('motoristaDocAnexoAtual').innerHTML = '';
+    updateNumeroDocPattern();
+  }
+  document.getElementById('motoristaDocCancelEdit').addEventListener('click', resetMotoristaDocForm);
+
+  formMotoristaDoc.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var payload = {
+      nome: document.getElementById('motoristaDocNome').value.trim(),
+      tipo: document.getElementById('motoristaDocTipo').value,
+      numero: document.getElementById('motoristaDocNumero').value.trim(),
+      vencimento: document.getElementById('motoristaDocVencimento').value || null
+    };
+    if (!payload.nome || !payload.tipo) return;
+
+    var campoNumero = document.getElementById('motoristaDocNumero');
+    campoNumero.setCustomValidity('');
+    if (payload.tipo === 'CPF' && payload.numero && !cpfValido(payload.numero)) {
+      campoNumero.setCustomValidity('Este CPF não é válido. Confira os números digitados.');
+      campoNumero.reportValidity();
+      return;
+    }
+
+    var arquivo = document.getElementById('motoristaDocArquivo').files[0];
+    var btn = document.getElementById('motoristaDocSubmitBtn');
+    btn.disabled = true;
+    try {
+      if (arquivo) {
+        payload.arquivo_path = await uploadArquivo(arquivo, 'motoristas');
+      }
+      if (motoristaDocEditingId) {
+        await dbUpdate('documentos_motoristas', motoristaDocEditingId, payload);
+        var idxEdit = state.motoristasDocs.findIndex(function (d) { return d.id === motoristaDocEditingId; });
+        if (idxEdit > -1) state.motoristasDocs[idxEdit] = Object.assign({}, state.motoristasDocs[idxEdit], payload);
+      } else {
+        var novo = await dbInsert('documentos_motoristas', payload);
+        state.motoristasDocs.push(novo);
+      }
+      resetMotoristaDocForm();
+      renderAll();
+    } catch (err) {
+      alert('Não foi possível salvar o documento: ' + erroMsg(err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function renderMotoristaDocs() {
+    var wrap = document.getElementById('motoristaDocTableWrap');
+    document.getElementById('motoristaDocCountSub').textContent =
+      state.motoristasDocs.length === 0 ? '' : state.motoristasDocs.length + ' documento(s) cadastrado(s)';
+
+    if (state.motoristasDocs.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Nenhum documento de motorista cadastrado ainda. Registre CNH, RG ou outro documento acima.</p></div>';
+      return;
+    }
+    var rows = state.motoristasDocs.slice().sort(function (a, b) {
+      if (!a.vencimento && !b.vencimento) return a.nome.localeCompare(b.nome);
+      if (!a.vencimento) return 1;
+      if (!b.vencimento) return -1;
+      return a.vencimento.localeCompare(b.vencimento);
+    });
+    wrap.innerHTML = '<table><thead><tr>' +
+      '<th>Motorista</th><th>Tipo</th><th>Número</th><th>Vencimento</th><th>Status</th><th>Anexo</th><th></th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (d) {
+        var pill;
+        if (!d.vencimento) {
+          pill = '<span class="pill pill-neutral">Sem vencimento</span>';
+        } else {
+          var st = statusDoc(d.vencimento);
+          pill = '<span class="pill ' + st.cls + '">' + st.label + '</span>';
+        }
+        return '<tr data-id="' + d.id + '">' +
+          '<td>' + escapeHTML(d.nome) + '</td>' +
+          '<td>' + escapeHTML(d.tipo) + '</td>' +
+          '<td>' + escapeHTML(d.numero || '—') + '</td>' +
+          '<td>' + (d.vencimento ? fmtDate(d.vencimento) : '—') + '</td>' +
+          '<td>' + pill + '</td>' +
+          '<td>' + anexoCelulaTabela(d.arquivo_path) + '</td>' +
+          '<td class="actions">' +
+          '<button type="button" class="btn-text" data-action="edit">Editar</button>' +
+          '<button type="button" class="btn-text" data-action="delete" style="color:var(--danger);">Excluir</button>' +
+          '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  document.getElementById('motoristaDocTableWrap').addEventListener('click', async function (e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var id = tr.dataset.id;
+    var idx = state.motoristasDocs.findIndex(function (d) { return d.id === id; });
+    if (idx === -1) return;
+
+    if (btn.dataset.action === 'delete') {
+      if (!confirm('Excluir este documento?')) return;
+      try {
+        await dbDelete('documentos_motoristas', id);
+        await removerArquivo(state.motoristasDocs[idx].arquivo_path);
+        state.motoristasDocs.splice(idx, 1);
+        renderAll();
+      } catch (err) {
+        alert('Não foi possível excluir: ' + erroMsg(err));
+      }
+    } else if (btn.dataset.action === 'ver-anexo') {
+      abrirAnexo(btn.dataset.path);
+    } else if (btn.dataset.action === 'edit') {
+      var d = state.motoristasDocs[idx];
+      motoristaDocEditingId = d.id;
+      document.getElementById('motoristaDocNome').value = d.nome;
+      document.getElementById('motoristaDocTipo').value = d.tipo;
+      updateNumeroDocPattern();
+      document.getElementById('motoristaDocNumero').value = d.numero || '';
+      document.getElementById('motoristaDocVencimento').value = d.vencimento || '';
+      document.getElementById('motoristaDocFormTitle').textContent = 'Editar documento do motorista';
+      document.getElementById('motoristaDocSubmitBtn').textContent = 'Salvar alterações';
+      document.getElementById('motoristaDocEditingFlag').classList.add('active');
+      document.getElementById('motoristaDocAnexoAtual').innerHTML = d.arquivo_path
+        ? 'Anexo atual: ' + anexoCelulaTabela(d.arquivo_path) + ' — envie um novo arquivo acima para substituir.'
+        : '';
+      showTab('docs');
+      showDocsSubTab('motoristas');
+      document.getElementById('formMotoristaDoc').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  /* ================= MOTORISTAS ================= */
+  function renderMotoristas() {
+    var wrap = document.getElementById('motoristaTableWrap');
+    if (state.multas.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Nenhuma multa registrada ainda. O ranking de motoristas aparece aqui assim que houver dados.</p></div>';
+      return;
+    }
+    var byMotorista = {};
+    state.multas.forEach(function (m) {
+      if (!byMotorista[m.motorista]) byMotorista[m.motorista] = { count: 0, valor: 0, pontos: 0, tipos: {} };
+      byMotorista[m.motorista].count++;
+      byMotorista[m.motorista].valor += Number(m.valor) || 0;
+      byMotorista[m.motorista].pontos += pontosDaMulta(m);
+      byMotorista[m.motorista].tipos[m.tipo] = (byMotorista[m.motorista].tipos[m.tipo] || 0) + 1;
+    });
+    var entries = Object.keys(byMotorista).map(function (nome) {
+      var d = byMotorista[nome];
+      var tipoTop = Object.keys(d.tipos).sort(function (a, b) { return d.tipos[b] - d.tipos[a]; })[0];
+      return { nome: nome, count: d.count, valor: d.valor, pontos: d.pontos, tipoTop: tipoTop };
+    }).sort(function (a, b) { return b.count - a.count; });
+
+    var max = Math.max.apply(null, entries.map(function (e) { return e.count; }));
+
+    wrap.innerHTML = '<table><thead><tr>' +
+      '<th>Motorista</th><th class="num">Infrações</th><th class="num">Pontos</th><th>Frequência</th><th>Tipo mais comum</th><th class="num">Valor total</th>' +
+      '</tr></thead><tbody>' +
+      entries.map(function (e) {
+        var pct = Math.max(6, Math.round((e.count / max) * 100));
+        return '<tr>' +
+          '<td>' + escapeHTML(e.nome) + '</td>' +
+          '<td class="num">' + e.count + '</td>' +
+          '<td class="num">' + e.pontos + '</td>' +
+          '<td><div class="rank-track" style="max-width:160px;"><div class="rank-fill" style="width:' + pct + '%"></div></div></td>' +
+          '<td>' + escapeHTML(e.tipoTop) + '</td>' +
+          '<td class="num">' + fmtBRL(e.valor) + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  /* ================= RELATÓRIOS ================= */
+  function renderRelatorios() {
+    var wrap = document.getElementById('resumoMensalWrap');
+    if (state.multas.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Sem multas registradas para gerar o resumo mensal.</p></div>';
+      return;
+    }
+    var byMonth = {};
+    state.multas.forEach(function (m) {
+      if (!m.data) return;
+      var key = m.data.slice(0, 7); // yyyy-mm
+      if (!byMonth[key]) byMonth[key] = { count: 0, valor: 0 };
+      byMonth[key].count++;
+      byMonth[key].valor += Number(m.valor) || 0;
+    });
+    var meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    var keys = Object.keys(byMonth).sort().reverse();
+    wrap.innerHTML = '<table><thead><tr><th>Mês</th><th class="num">Qtd. multas</th><th class="num">Valor total</th></tr></thead><tbody>' +
+      keys.map(function (k) {
+        var parts = k.split('-');
+        var label = meses[parseInt(parts[1], 10) - 1] + '/' + parts[0];
+        return '<tr><td>' + label + '</td><td class="num">' + byMonth[k].count + '</td><td class="num">' + fmtBRL(byMonth[k].valor) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function renderClassificacao() {
+    var wrap = document.getElementById('classificacaoWrap');
+    if (state.multas.length === 0) {
+      wrap.innerHTML = '<div class="empty-state"><p>Sem multas registradas para gerar o relatório por classificação.</p></div>';
+      return;
+    }
+    var ordem = ['Gravíssima', 'Grave', 'Média', 'Leve'];
+    var buckets = {};
+    ordem.forEach(function (k) { buckets[k] = { count: 0, valor: 0 }; });
+    var semClass = { count: 0, valor: 0 };
+    state.multas.forEach(function (m) {
+      if (m.classificacao && buckets[m.classificacao]) {
+        buckets[m.classificacao].count++;
+        buckets[m.classificacao].valor += Number(m.valor) || 0;
+      } else {
+        semClass.count++;
+        semClass.valor += Number(m.valor) || 0;
+      }
+    });
+
+    var rows = ordem.map(function (k) {
+      var b = buckets[k];
+      var pontosTotal = b.count * PONTOS_POR_CLASSIFICACAO[k];
+      return '<tr><td>' + classificacaoPill(k) + '</td><td class="num">' + b.count + '</td><td class="num">' + PONTOS_POR_CLASSIFICACAO[k] + '</td><td class="num">' + pontosTotal + '</td><td class="num">' + fmtBRL(b.valor) + '</td></tr>';
+    }).join('');
+    if (semClass.count > 0) {
+      rows += '<tr><td><span class="pill pill-neutral">Não classificada</span></td><td class="num">' + semClass.count + '</td><td class="num">—</td><td class="num">—</td><td class="num">' + fmtBRL(semClass.valor) + '</td></tr>';
+    }
+
+    wrap.innerHTML = '<table><thead><tr>' +
+      '<th>Classificação</th><th class="num">Qtd. multas</th><th class="num">Pontos (cada)</th><th class="num">Total de pontos</th><th class="num">Valor total</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  /* ---------------- Exportação ---------------- */
+  function toCSV(rows, headers) {
+    function esc(v) {
+      v = String(v == null ? '' : v);
+      if (/[;"\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+      return v;
+    }
+    var lines = [headers.map(function (h) { return esc(h.label); }).join(';')];
+    rows.forEach(function (r) { lines.push(headers.map(function (h) { return esc(h.get(r)); }).join(';')); });
+    return lines.join('\r\n');
+  }
+  function downloadFile(filename, content, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('btnExportMultas').addEventListener('click', function () {
+    if (state.multas.length === 0) { alert('Não há multas para exportar.'); return; }
+    var headers = [
+      { label: 'Data', get: function (r) { return fmtDate(r.data); } },
+      { label: 'Veículo', get: function (r) { return r.placa; } },
+      { label: 'Motorista', get: function (r) { return r.motorista; } },
+      { label: 'UF', get: function (r) { return r.uf || ''; } },
+      { label: 'Tipo', get: function (r) { return r.tipo; } },
+      { label: 'Classificação', get: function (r) { return r.classificacao || ''; } },
+      { label: 'Pontos', get: function (r) { return pontosDaMulta(r); } },
+      { label: 'Valor', get: function (r) { return (Number(r.valor) || 0).toFixed(2).replace('.', ','); } },
+      { label: 'Status', get: function (r) { return r.status; } },
+      { label: 'Observações', get: function (r) { return r.obs || ''; } }
+    ];
+    downloadFile('projlab-multas.csv', '\uFEFF' + toCSV(state.multas, headers), 'text/csv;charset=utf-8');
+  });
+
+  document.getElementById('btnExportFrota').addEventListener('click', function () {
+    if (state.frota.length === 0) { alert('Não há veículos para exportar.'); return; }
+    var headers = [
+      { label: 'Placa', get: function (r) { return r.placa; } },
+      { label: 'Modelo', get: function (r) { return r.modelo; } },
+      { label: 'Ano', get: function (r) { return r.ano || ''; } },
+      { label: 'Cor', get: function (r) { return r.cor || ''; } },
+      { label: 'Responsável', get: function (r) { return r.responsavel || ''; } },
+      { label: 'Status', get: function (r) { return r.status; } }
+    ];
+    downloadFile('projlab-frota.csv', '\uFEFF' + toCSV(state.frota, headers), 'text/csv;charset=utf-8');
+  });
+
+  document.getElementById('btnExportJSON').addEventListener('click', function () {
+    var backup = { geradoEm: new Date().toISOString(), frota: state.frota, multas: state.multas, documentos: state.docs, documentosMotoristas: state.motoristasDocs };
+    downloadFile('projlab-backup.json', JSON.stringify(backup, null, 2), 'application/json;charset=utf-8');
+  });
+
+  /* ---------------- Render geral ---------------- */
+  function renderAll() {
+    refreshVeiculoSelects();
+    refreshMotoristaDatalist();
+    renderDashboard();
+    renderMultas();
+    renderFrota();
+    renderDocs();
+    renderMotoristaDocs();
+    renderMotoristas();
+    renderRelatorios();
+    renderClassificacao();
+  }
+})();
+</script>
+</body>
+</html>
